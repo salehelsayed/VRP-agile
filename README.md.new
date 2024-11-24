@@ -1,0 +1,13 @@
+# VRP-agile Simulation Project
+
+## Setup
+1. Install Java JDK 11+
+2. Install Gradle
+3. Add Gradle to PATH
+
+## Build & Test
+Run: `gradlew clean build test jacocoTestReport`
+
+## Reports Location
+- Tests: build/reports/tests/test/index.html
+- Coverage: build/reports/jacoco/test/html/index.html
