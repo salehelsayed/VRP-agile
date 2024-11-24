@@ -1,7 +1,11 @@
 plugins {
     id 'java'
+    id 'application'
     id 'jacoco'  // for code coverage
 }
+
+group 'com.example'
+version '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
@@ -9,11 +13,11 @@ repositories {
 
 dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter:5.8.1'
+    implementation 'org.jgrapht:jgrapht-core:1.5.1'
 }
 
-test {
-    useJUnitPlatform()
-    finalizedBy jacocoTestReport
+application {
+    mainClassName = 'com.v.Simulation'
 }
 
 jacocoTestReport {
