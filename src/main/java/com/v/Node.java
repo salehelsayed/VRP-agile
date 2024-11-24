@@ -12,24 +12,19 @@ public class Node {
     private int port;
     private Map<String, Connection> connections;
     private ServerSocket serverSocket;
+    private Thread listenerThread;
 
     public Node(String ip, int port) {
         this.ip = ip;
         this.port = port;
         this.connections = new HashMap<>();
-        try {
-            this.serverSocket = new ServerSocket(this.port);
-            startListener();
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw new RuntimeException("Failed to start server on port " + this.port, e);
-        }
     }
 
-    private void startListener() {
-        Thread listenerThread = new Thread(() -> {
-            while (true) {
-                try {
+    public void startListener() {
+        listenerThread = new Thread(() -> {
+            try {
+                serverSocket = new ServerSocket(port);
+                while (!serverSocket.isClosed()) {
                     Socket clientSocket = serverSocket.accept();
                     DataInputStream in = new DataInputStream(clientSocket.getInputStream());
                     DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
@@ -43,13 +38,25 @@ public class Node {
                         clientSocket.close();
                     }
                     // You can add more message handling here
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    break;
                 }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         });
         listenerThread.start();
+    }
+
+    public void stopListener() {
+        try {
+            if (serverSocket != null && !serverSocket.isClosed()) {
+                serverSocket.close();
+            }
+            if (listenerThread != null && listenerThread.isAlive()) {
+                listenerThread.join();
+            }
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     public String getIp() {
