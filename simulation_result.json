@@ -1,0 +1,42 @@
+{
+  "nodeCount": 3,
+  "adjacencyMatrix": [
+    [
+      0,
+      1,
+      1
+    ],
+    [
+      1,
+      0,
+      1
+    ],
+    [
+      1,
+      1,
+      0
+    ]
+  ],
+  "nodes": [
+    {
+      "ip": "localhost",
+      "port": 8080,
+      "connections": [
+        "localhost:8082",
+        "localhost:8081"
+      ]
+    },
+    {
+      "ip": "localhost",
+      "port": 8081,
+      "connections": [
+        "localhost:8082"
+      ]
+    },
+    {
+      "ip": "localhost",
+      "port": 8082,
+      "connections": []
+    }
+  ]
+}

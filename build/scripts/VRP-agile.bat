@@ -70,7 +70,7 @@ goto fail
 :execute
 @rem Setup the command line
 
-set CLASSPATH=%APP_HOME%\lib\VRP-agile-1.0-SNAPSHOT.jar;%APP_HOME%\lib\jgrapht-core-1.5.1.jar;%APP_HOME%\lib\jheaps-0.13.jar
+set CLASSPATH=%APP_HOME%\lib\VRP-agile-1.0-SNAPSHOT.jar;%APP_HOME%\lib\jgrapht-core-1.5.1.jar;%APP_HOME%\lib\gson-2.10.1.jar;%APP_HOME%\lib\jheaps-0.13.jar
 
 
 @rem Execute VRP-agile

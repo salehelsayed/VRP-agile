@@ -3,6 +3,10 @@ package com.v;
 import org.jgrapht.Graph;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.SimpleGraph;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import java.io.FileWriter;
+import java.io.IOException;
 
 public class Simulation {
     public static void main(String[] args) {
@@ -25,6 +29,16 @@ public class Simulation {
         cleanupNodes(nodes);
 
         System.out.println("Simulation completed");
+        
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        SimulationData simulationData = new SimulationData(nodeCount, adjacencyMatrix, nodes);
+        try (FileWriter writer = new FileWriter("simulation_result.json")) {
+            gson.toJson(simulationData, writer);
+            System.out.println("Simulation data exported to simulation_result.json");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         return "Simulation completed";
     }
 
@@ -100,6 +114,57 @@ public class Simulation {
     private static void cleanupNodes(Node[] nodes) {
         for (Node node : nodes) {
             node.stopListener();
+        }
+    }
+
+    public static class SimulationData {
+        private int nodeCount;
+        private int[][] adjacencyMatrix;
+        private NodeInfo[] nodes;
+
+        public SimulationData(int nodeCount, int[][] adjacencyMatrix, Node[] nodes) {
+            this.nodeCount = nodeCount;
+            this.adjacencyMatrix = adjacencyMatrix;
+            this.nodes = new NodeInfo[nodes.length];
+            for (int i = 0; i < nodes.length; i++) {
+                this.nodes[i] = new NodeInfo(nodes[i]);
+            }
+        }
+
+        public static class NodeInfo {
+            private String ip;
+            private int port;
+            private String[] connections;
+
+            public NodeInfo(Node node) {
+                this.ip = node.getIp();
+                this.port = node.getPort();
+                this.connections = node.getConnections().keySet().toArray(new String[0]);
+            }
+
+            public String getIp() {
+                return ip;
+            }
+
+            public int getPort() {
+                return port;
+            }
+
+            public String[] getConnections() {
+                return connections;
+            }
+        }
+
+        public int getNodeCount() {
+            return nodeCount;
+        }
+
+        public int[][] getAdjacencyMatrix() {
+            return adjacencyMatrix;
+        }
+
+        public NodeInfo[] getNodes() {
+            return nodes;
         }
     }
 }
