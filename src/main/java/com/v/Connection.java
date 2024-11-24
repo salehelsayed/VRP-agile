@@ -20,11 +20,11 @@ public class Connection {
         this.sourcePort = sourcePort;
         this.destinationIP = destinationIP;
         this.destinationPort = destinationPort;
-        this.socket = new Socket(sourceIP, sourcePort);
+        this.socket = new Socket(destinationIP, destinationPort);
         this.out = new DataOutputStream(socket.getOutputStream());
         this.in = new DataInputStream(socket.getInputStream());
         
-        this.out.writeUTF("Connect:" + this.destinationIP + ":" + this.destinationPort);
+        this.out.writeUTF("Connect:" + this.sourceIP + ":" + this.sourcePort);
         this.out.flush();
         
         String response = in.readUTF();
