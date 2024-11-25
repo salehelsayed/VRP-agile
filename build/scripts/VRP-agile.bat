@@ -70,7 +70,7 @@ goto fail
 :execute
 @rem Setup the command line
 
-set CLASSPATH=%APP_HOME%\lib\VRP-agile-1.0-SNAPSHOT.jar;%APP_HOME%\lib\jgrapht-core-1.5.1.jar;%APP_HOME%\lib\gson-2.10.1.jar;%APP_HOME%\lib\jheaps-0.13.jar
+set CLASSPATH=%APP_HOME%\lib\VRP-agile-1.0-SNAPSHOT.jar;%APP_HOME%\lib\jgrapht-core-1.5.1.jar;%APP_HOME%\lib\gson-2.10.1.jar;%APP_HOME%\lib\mockito-core-4.6.1.jar;%APP_HOME%\lib\jheaps-0.13.jar;%APP_HOME%\lib\byte-buddy-1.12.10.jar;%APP_HOME%\lib\byte-buddy-agent-1.12.10.jar;%APP_HOME%\lib\objenesis-3.2.jar
 
 
 @rem Execute VRP-agile

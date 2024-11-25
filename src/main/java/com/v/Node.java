@@ -4,13 +4,20 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Map;
+
+import com.v.Connections.Connection;
+import com.v.Connections.IConnection;
+import com.v.Connections.MultiHopConnection;
+import com.v.Protocols.DSR;
+import com.v.Protocols.IProtocol;
+
 import java.util.HashMap;
 
 public class Node {
 
     private String ip;
     private int port;
-    private Map<String, Connection> connections;
+    private Map<String, IConnection> connections;
     private ServerSocket serverSocket;
     private Thread listenerThread;
 
@@ -67,14 +74,14 @@ public class Node {
         return port;
     }
 
-    public Map<String, Connection> getConnections() {
+    public Map<String, IConnection> getConnections() {
         return connections;
     }
 
-    public Connection getConnection(String destinationIP, int destinationPort) {
+    public IConnection getConnection(String destinationIP, int destinationPort) {
         // Ensure that only one connection is established per node
         String key = destinationIP + ":" + destinationPort;
-        Connection connection = connections.get(key);
+        IConnection connection = connections.get(key);
 
         try {
             if (connection == null) {
@@ -82,8 +89,15 @@ public class Node {
                 connections.put(key, connection);
             }
         } catch (IOException e) {
-            e.printStackTrace();
-            throw new RuntimeException("Failed to establish connection to " + destinationIP + ":" + destinationPort, e);
+            // Attempt to create a multi-hop connection using Protocol
+            try {
+                IProtocol protocol = new DSR();
+                connection = new MultiHopConnection(this.ip, this.port, destinationIP, destinationPort, protocol);
+            } catch (IOException e1) {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+            }
+            connections.put(key, connection);
         }
 
         return connection;
