@@ -9,7 +9,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 public class Simulation {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         System.out.println("Simulation started");
         runSimulation(3, null);
         System.out.println("Simulation ended");
@@ -19,7 +19,15 @@ public class Simulation {
         adjacencyMatrix = initializeAdjacencyMatrix(nodeCount, adjacencyMatrix);
         validateAdjacencyMatrix(nodeCount, adjacencyMatrix);
 
-        Node[] nodes = createNodes(nodeCount);
+        Node[] nodes;
+        try {
+            nodes = createNodes(nodeCount);
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            // Start of Selection
+            e.printStackTrace();
+            return "Simulation failed due to IO error";
+        }
         Graph<Node, DefaultEdge> graph = buildGraph(nodes, adjacencyMatrix);
 
         connectNodes(graph, nodes, adjacencyMatrix);
@@ -29,7 +37,7 @@ public class Simulation {
         cleanupNodes(nodes);
 
         System.out.println("Simulation completed");
-        
+
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         SimulationData simulationData = new SimulationData(nodeCount, adjacencyMatrix, nodes);
         try (FileWriter writer = new FileWriter("simulation_result.json")) {
@@ -68,7 +76,8 @@ public class Simulation {
                 throw new IllegalArgumentException("Adjacency matrix must be square");
             }
             if (adjacencyMatrix[i][i] != 0) {
-                throw new IllegalArgumentException("Adjacency matrix must not contain self-loops (adjacencyMatrix[" + i + "][" + i + "] must be 0)");
+                throw new IllegalArgumentException("Adjacency matrix must not contain self-loops (adjacencyMatrix[" + i
+                        + "][" + i + "] must be 0)");
             }
         }
 
@@ -77,11 +86,11 @@ public class Simulation {
         }
     }
 
-    private static Node[] createNodes(int nodeCount) {
+    private static Node[] createNodes(int nodeCount) throws IOException {
         Node[] nodes = new Node[nodeCount];
         for (int i = 0; i < nodeCount; i++) {
             nodes[i] = new Node("localhost", 8080 + i);
-            nodes[i].startListener();
+            nodes[i].startListeners();
         }
         return nodes;
     }
@@ -113,7 +122,12 @@ public class Simulation {
 
     private static void cleanupNodes(Node[] nodes) {
         for (Node node : nodes) {
-            node.stopListener();
+            try {
+                node.startListeners();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
         }
     }
 
