@@ -1,20 +1,16 @@
-package com.v.Connections.adhoc;
+package com.v.connections.adhoc;
 
 import java.io.IOException;
-import java.net.Socket;
 
-import com.v.Connections.IConnection;
-import com.v.Protocols.IProtocol;
+import com.v.Protocols.Protocol;
+import com.v.connections.Connection;
+import com.v.connections.packets.Packet;
 
-public class MultiHopConnection implements IConnection {
-    private int sourcePort;
-    private String destinationIP;
-    private int destinationPort;
-    private IProtocol protocol;
-    private String sourceIP;
+public class MultiHopConnection extends Connection {
+    private Protocol protocol;
 
     public MultiHopConnection(String sourceIP, int sourcePort, String destinationIP, int destinationPort,
-            IProtocol protocol) throws IOException {
+            Protocol protocol) throws IOException {
         this.sourceIP = sourceIP;
         this.sourcePort = sourcePort;
         this.destinationIP = destinationIP;
@@ -25,24 +21,17 @@ public class MultiHopConnection implements IConnection {
 
     // todo: implememnt packet class
     @Override
-    public void send(String message) throws IOException {
+    public void send(Packet message) throws IOException {
         protocol.sendMessage(message);
     }
 
     @Override
-    public String receive() throws IOException {
-        return protocol.receiveMessage();
+    public Packet receive(Packet expectedPacket) throws IOException {
+        return protocol.receiveMessage(expectedPacket);
     }
 
     @Override
     public void close() throws IOException {
         protocol.closeConnection();
-    }
-
-    @Override
-    public void registerConnection(String sourceIP, int sourcePort, String destinationIP, int destinationPort,
-            Socket socket) throws IOException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'registerConnection'");
     }
 }

@@ -11,26 +11,72 @@ import java.io.IOException;
 public class Simulation {
     public static void main(String[] args) throws IOException {
         System.out.println("Simulation started");
-        runSimulation(3, null);
+
+        int nodeCount = 3; // Set the number of nodes
+
+        // Generate upper triangular matrices filled with ones
+        int[][] p2pMatrix = generateRandomUpperTriangularMatrix(nodeCount);
+        int[][] demandMatrix = generateFullUpperTriangularMatrix(nodeCount);
+
+        runSimulation(nodeCount, p2pMatrix, demandMatrix);
+
         System.out.println("Simulation ended");
     }
 
-    public static String runSimulation(int nodeCount, int[][] adjacencyMatrix) {
-        adjacencyMatrix = initializeAdjacencyMatrix(nodeCount, adjacencyMatrix);
-        validateAdjacencyMatrix(nodeCount, adjacencyMatrix);
+    private static int[][] generateRandomUpperTriangularMatrix(int nodeCount) {
+        int[][] matrix = new int[nodeCount][nodeCount];
+        for (int i = 0; i < nodeCount; i++) {
+            for (int j = i + 1; j < nodeCount; j++) {
+                    // Start Generation Here
+                    if (Math.random() < 0.5) {
+                        matrix[i][j] = 1;
+                        matrix[j][i] = 1;
+                    } else {
+                        matrix[i][j] = 0;
+                        matrix[j][i] = 0;
+                    }
+                matrix[i][j] = 1; // Set upper triangle to 1
+                matrix[j][i] = matrix[i][j]; // Ensure symmetry if needed
+            }
+            matrix[i][i] = 0; // No self-loops
+        }
+        return matrix;
+
+    }
+
+    // Update the generateFullUpperTriangularMatrix method
+    private static int[][] generateFullUpperTriangularMatrix(int nodeCount) {
+        int[][] matrix = new int[nodeCount][nodeCount];
+        for (int i = 0; i < nodeCount; i++) {
+            for (int j = i + 1; j < nodeCount; j++) {
+                matrix[i][j] = 1; // Set upper triangle to 1
+                matrix[j][i] = matrix[i][j]; // Ensure symmetry if needed
+            }
+            matrix[i][i] = 0; // No self-loops
+        }
+        return matrix;
+    }
+
+    public static String runSimulation(int nodeCount, int[][] p2pMatrix, int[][] demandMatrix) {
+        p2pMatrix = initializeMatrix(nodeCount, p2pMatrix, true);
+        demandMatrix = initializeMatrix(nodeCount, demandMatrix, false);
+
+        validateMatrix(nodeCount, p2pMatrix);
+        validateMatrix(nodeCount, demandMatrix);
 
         Node[] nodes;
         try {
             nodes = createNodes(nodeCount);
         } catch (IOException e) {
-            // TODO Auto-generated catch block
-            // Start of Selection
             e.printStackTrace();
             return "Simulation failed due to IO error";
         }
-        Graph<Node, DefaultEdge> graph = buildGraph(nodes, adjacencyMatrix);
 
-        connectNodes(graph, nodes, adjacencyMatrix);
+        Graph<Node, DefaultEdge> graph = buildGraph(nodes, p2pMatrix);
+
+        connectNodesP2P(graph, nodes, p2pMatrix);
+
+        processDemands(nodes, demandMatrix);
 
         printNodes(nodes);
 
@@ -39,7 +85,7 @@ public class Simulation {
         System.out.println("Simulation completed");
 
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        SimulationData simulationData = new SimulationData(nodeCount, adjacencyMatrix, nodes);
+        SimulationData simulationData = new SimulationData(nodeCount, p2pMatrix, demandMatrix, nodes);
         try (FileWriter writer = new FileWriter("simulation_result.json")) {
             gson.toJson(simulationData, writer);
             System.out.println("Simulation data exported to simulation_result.json");
@@ -50,52 +96,54 @@ public class Simulation {
         return "Simulation completed";
     }
 
-    private static int[][] initializeAdjacencyMatrix(int nodeCount, int[][] adjacencyMatrix) {
-        if (adjacencyMatrix == null || adjacencyMatrix.length != nodeCount) {
-            adjacencyMatrix = new int[nodeCount][nodeCount];
+    private static int[][] initializeMatrix(int nodeCount, int[][] matrix, boolean isP2P) {
+        if (matrix == null || matrix.length != nodeCount) {
+            matrix = new int[nodeCount][nodeCount];
             for (int i = 0; i < nodeCount; i++) {
                 for (int j = 0; j < nodeCount; j++) {
                     if (i == j) {
-                        adjacencyMatrix[i][j] = 0;
+                        matrix[i][j] = 0;
                     } else {
-                        adjacencyMatrix[i][j] = 1;
+                        if (isP2P) {
+                            matrix[i][j] = (Math.random() > 0.5) ? 1 : 0;
+                        } else {
+                            matrix[i][j] = (Math.random() > 0.5) ? 1 : 0;
+                        }
                     }
                 }
             }
         }
-        return adjacencyMatrix;
+        return matrix;
     }
 
-    private static void validateAdjacencyMatrix(int nodeCount, int[][] adjacencyMatrix) {
-        if (adjacencyMatrix.length < 2) {
-            throw new IllegalArgumentException("Adjacency matrix must have size of at least 2x2");
+    private static void validateMatrix(int nodeCount, int[][] matrix) {
+        if (matrix.length != nodeCount) {
+            throw new IllegalArgumentException("Matrix size must match node count");
         }
-
-        for (int i = 0; i < adjacencyMatrix.length; i++) {
-            if (adjacencyMatrix[i].length != adjacencyMatrix.length) {
-                throw new IllegalArgumentException("Adjacency matrix must be square");
+        for (int i = 0; i < matrix.length; i++) {
+            if (matrix[i].length != nodeCount) {
+                throw new IllegalArgumentException("Matrix must be square");
             }
-            if (adjacencyMatrix[i][i] != 0) {
-                throw new IllegalArgumentException("Adjacency matrix must not contain self-loops (adjacencyMatrix[" + i
+            if (matrix[i][i] != 0) {
+                throw new IllegalArgumentException("Matrix must not contain self-loops (matrix[" + i
                         + "][" + i + "] must be 0)");
             }
         }
-
-        if (adjacencyMatrix.length != nodeCount) {
-            throw new IllegalArgumentException("Adjacency matrix size must match node count");
-        }
     }
 
+    // Modify the createNodes method to pass nodeId
     private static Node[] createNodes(int nodeCount) throws IOException {
         Node[] nodes = new Node[nodeCount];
+        int portStart = 8080;
+        int portEnd = 8100;
         for (int i = 0; i < nodeCount; i++) {
-            nodes[i] = new Node("localhost", 8080 + i);
+            nodes[i] = new Node(i, "127.0.0.1", portStart+((i+1)*5), portEnd+((i+2)*5)); // Pass nodeId
             nodes[i].startListeners();
         }
         return nodes;
     }
 
-    private static Graph<Node, DefaultEdge> buildGraph(Node[] nodes, int[][] adjacencyMatrix) {
+    private static Graph<Node, DefaultEdge> buildGraph(Node[] nodes, int[][] p2pMatrix) {
         Graph<Node, DefaultEdge> graph = new SimpleGraph<>(DefaultEdge.class);
         for (Node node : nodes) {
             graph.addVertex(node);
@@ -103,12 +151,37 @@ public class Simulation {
         return graph;
     }
 
-    private static void connectNodes(Graph<Node, DefaultEdge> graph, Node[] nodes, int[][] adjacencyMatrix) {
-        for (int i = 0; i < adjacencyMatrix.length; i++) {
-            for (int j = 0; j < adjacencyMatrix[i].length; j++) {
-                if (adjacencyMatrix[i][j] == 1 && !graph.containsEdge(nodes[i], nodes[j])) {
+    // Update logs to include nodeId
+    private static void connectNodesP2P(Graph<Node, DefaultEdge> graph, Node[] nodes, int[][] p2pMatrix) {
+        for (int i = 0; i < p2pMatrix.length; i++) {
+            for (int j = i + 1; j < p2pMatrix[i].length; j++) {
+                if (p2pMatrix[i][j] == 1) {
                     graph.addEdge(nodes[i], nodes[j]);
-                    nodes[i].getConnection(nodes[j].getIp(), nodes[j].getPort());
+                    nodes[i].addNeighbor(nodes[j]);
+                    nodes[j].addNeighbor(nodes[i]);
+
+                    // Establish P2P connections via sockets
+                    try {
+                        System.out.println("Establishing P2P connection between Node " + nodes[i].getNodeId()
+                                + " and Node " + nodes[j].getNodeId());
+                        nodes[i].establishP2PConnection(nodes[j]);
+
+                        System.out.println("P2P connection successful between Node " + nodes[i].getNodeId()
+                                + " and Node " + nodes[j].getNodeId());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+    }
+
+    private static void processDemands(Node[] nodes, int[][] demandMatrix) {
+        for (int i = 0; i < demandMatrix.length; i++) {
+            for (int j = 0; j < demandMatrix[i].length; j++) {
+                if (demandMatrix[i][j] == 1) {
+                    System.out.println("Processing demand from Node " + i + " to Node " + j);
+                    nodes[i].processDemand(nodes[j], "Test Message");
                 }
             }
         }
@@ -123,9 +196,8 @@ public class Simulation {
     private static void cleanupNodes(Node[] nodes) {
         for (Node node : nodes) {
             try {
-                node.startListeners();
+                node.close();
             } catch (IOException e) {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
             }
         }
@@ -133,12 +205,14 @@ public class Simulation {
 
     public static class SimulationData {
         private int nodeCount;
-        private int[][] adjacencyMatrix;
+        private int[][] p2pMatrix;
+        private int[][] demandMatrix;
         private NodeInfo[] nodes;
 
-        public SimulationData(int nodeCount, int[][] adjacencyMatrix, Node[] nodes) {
+        public SimulationData(int nodeCount, int[][] p2pMatrix, int[][] demandMatrix, Node[] nodes) {
             this.nodeCount = nodeCount;
-            this.adjacencyMatrix = adjacencyMatrix;
+            this.p2pMatrix = p2pMatrix;
+            this.demandMatrix = demandMatrix;
             this.nodes = new NodeInfo[nodes.length];
             for (int i = 0; i < nodes.length; i++) {
                 this.nodes[i] = new NodeInfo(nodes[i]);
@@ -173,8 +247,12 @@ public class Simulation {
             return nodeCount;
         }
 
-        public int[][] getAdjacencyMatrix() {
-            return adjacencyMatrix;
+        public int[][] getP2PMatrix() {
+            return p2pMatrix;
+        }
+
+        public int[][] getDemandMatrix() {
+            return demandMatrix;
         }
 
         public NodeInfo[] getNodes() {

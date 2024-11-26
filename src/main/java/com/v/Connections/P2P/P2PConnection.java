@@ -1,84 +1,129 @@
-package com.v.Connections.P2P;
+package com.v.connections.P2P;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
-public class P2PConnection {
-    private String sourceIP;
-    private int sourcePort;
-    private String destinationIP;
-    private int destinationPort;
-    private Socket socket;
-    private ServerSocket serverSocket;
-    private DataOutputStream out;
-    private DataInputStream in;
-    private Thread listenerThread;
+import com.v.connections.Connection;
+import com.v.connections.packets.Packet;
 
-    public P2PConnection(String sourceIP, int sourcePort) throws IOException {
-        setListenerThread(sourcePort);
+public abstract class P2PConnection extends Connection {
 
-        //todo:check hwhere ip goes
+    protected String sourceIP;
+    protected String destinationIP;
+    protected int port;
+    protected Socket socket;
+    protected DataInputStream in;
+    protected DataOutputStream out;
+    protected volatile boolean running = true;
+    protected ConnectionState state;
+
+    // List of handler threads
+    protected List<Thread> handlerThreads = new CopyOnWriteArrayList<>();
+
+    // Added enum for connection states
+    protected enum ConnectionState {
+        WAITING,
+        CONNECTED,
+        CLOSED, ESTABLISHED
     }
 
-    public P2PConnection(String sourceIP, int sourcePort, String destinationIP, int destinationPort)
-            throws IOException {
-        this.socket = new Socket(destinationIP, destinationPort);
-
-        registerConnection(sourceIP, sourcePort, destinationIP, destinationPort);
-    }
-
-    private void registerConnection(String sourceIP, int sourcePort, String destinationIP, int destinationPort
-            )
-            throws IOException {
-        this.sourceIP = sourceIP;
-        this.sourcePort = sourcePort;
-        this.destinationIP = destinationIP;
-        this.destinationPort = destinationPort;
-       this.out = new DataOutputStream(socket.getOutputStream());
+    public P2PConnection(Socket socket) throws IOException {
+        this.socket = socket;
         this.in = new DataInputStream(socket.getInputStream());
-
-        this.out.writeUTF("Connect:" + this.sourceIP + ":" + this.sourcePort);
-        this.out.flush();
-
-        String response = in.readUTF();
-        if (response.equals("Connected")) {
-            System.out.println("Connection established from " + sourceIP + ":" + sourcePort + " to " + destinationIP
-                    + ":" + destinationPort);
-        } else {
-            throw new IOException("Connection failed: " + response);
-        }
+        this.out = new DataOutputStream(socket.getOutputStream());
+        this.state = ConnectionState.CONNECTED; // Set initial state
+        startMessageHandler();
     }
-    private Socket setListenerThread(int port) {
-        this.listenerThread = new Thread(() -> {
-            try (ServerSocket server = new ServerSocket(port)) {
-                this.serverSocket = server;
-                while (!server.isClosed()) {
-                    this.socket = server.accept();
-                    handleClientSocket(this.socket);
+
+    public P2PConnection() {
+        //TODO Auto-generated constructor stub
+    }
+
+    // Abstract method to generate a unique key for the connection
+    protected abstract String generateKey();
+
+    // Common method to start message handling
+    protected void startMessageHandler() {
+        Thread handlerThread = new Thread(() -> {
+            try {
+                while (running && !socket.isClosed()) {
+                    String data = in.readUTF();
+                    System.out.println("Received message: " + data);
+                    // Process the incoming message
+                    // processIncomingMessage(data);
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                if (running) {
+                    e.printStackTrace();
+                }
+            } finally {
+                try {
+                    close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         });
-        listenerThread.start();
-        return this.socket;
+        handlerThread.start();
+        handlerThreads.add(handlerThread);
     }
 
-    private synchronized void handleClientSocket(Socket clientSocket) {
-        // Additional handling of the clientSocket can be done here
+    @Override
+    public void send(Packet packet) throws IOException {
+        out.writeUTF(packet.toString());
+        out.flush();
     }
 
-    public Object getServerSocket() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getServerSocket'");
+    @Override
+    public Packet receive(Packet expectedPacket) throws IOException {
+        String data = in.readUTF();
+        // Parse data to create Packet object
+        return expectedPacket; // Implement parsing logic as needed
     }
 
-    public Object getListenerThread() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getListenerThread'");
+    @Override
+    public void close() throws IOException {
+        running = false;
+        if (socket != null && !socket.isClosed()) {
+            socket.close();
+        }
+        for (Thread thread : handlerThreads) {
+            if (thread != null && thread.isAlive()) {
+                thread.interrupt();
+                try {
+                    thread.join();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        // Update state
+        this.state = ConnectionState.CLOSED;
     }
 
+    public String getKey() {
+        return generateKey();
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public ConnectionState getState() {
+        return this.state;
+    }
+
+    public String getSourceIP() {
+        return sourceIP;
+    }
+
+    public String getDestinationIP() {
+        return destinationIP;
+    }
+
+    P2PConnectionFactory p;
 }
